@@ -443,6 +443,8 @@ By following these steps, you will significantly improve the security and stabil
 
 If you see any mistake or any better approach, feel free to share them in the comment.
 
+For those interested in automating this setup process, please refer to the [Linux Server Setup Script](Linux-server-setup-script.md).
+
 ## Regards
 [SR Tamim](https://sr-tamim.vercel.app)
 
