@@ -68,7 +68,8 @@ create_user() {
 disable_root_ssh() {
     if confirm "Do you want to disable root login via SSH?"; then
         echo "Disabling root login via SSH... Please wait."
-        sudo sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+        sudo mkdir -p /etc/ssh/sshd_config.d
+        echo "PermitRootLogin no" | sudo tee /etc/ssh/sshd_config.d/disable_root.conf
         if [ -f /etc/debian_version ]; then
             sudo systemctl restart ssh
         else
@@ -90,8 +91,11 @@ setup_ssh_key_auth() {
         echo "ssh-copy-id $ssh_user@$server_ip"
         read -r -p "Press Enter after you have generated and copied the SSH key..."
         echo "Configuring SSH to disable password authentication and enable key authentication... Please wait."
-        sudo sed -i 's/^PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-        sudo sed -i 's/^#PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+        sudo mkdir -p /etc/ssh/sshd_config.d
+        {
+            echo "PasswordAuthentication no"
+            echo "PubkeyAuthentication yes"
+        } | sudo tee /etc/ssh/sshd_config.d/ssh_key_auth.conf > /dev/null
         if [ -f /etc/debian_version ]; then
             sudo systemctl restart ssh
         else

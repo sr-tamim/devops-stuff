@@ -113,13 +113,17 @@ ssh-copy-id newuser@your_server_ip
 
 - `ssh-copy-id newuser@your_server_ip`: Copies your public key to the server's authorized keys file for the `newuser` account.
 
-Edit the SSH configuration file:
+Add some SSH configuration in a new .conf file:
 
 ```sh
-sudo nano /etc/ssh/sshd_config
+# make sure that drop-in directory exists
+sudo mkdir -p /etc/ssh/sshd_config.d
+
+# create a new .conf file
+sudo nano /etc/ssh/sshd_config.d/ssh_key_auth.conf
 ```
 
-Find and change the following lines:
+Write the following configuration in the file:
 
 ```sh
 PasswordAuthentication no
@@ -129,7 +133,7 @@ PubkeyAuthentication yes
 - `PasswordAuthentication no`: Disables password authentication for SSH.
 - `PubkeyAuthentication yes`: Enables public key authentication for SSH.
 
-Restart the SSH service:
+Save the file (`Ctrl + S`) and exit (`Ctrl + X`). Then, reload the SSH service:
 
 ```sh
 sudo systemctl restart ssh  # Debian/Ubuntu
