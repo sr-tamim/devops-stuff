@@ -5,6 +5,8 @@
 
 This guide covers the initial setup process for a new Linux server, focusing on basic security and maintenance tasks.
 
+#### For those interested in automating this setup process, please refer to the [Linux Server Setup Script](Linux-server-setup-script.md).
+
 ## 1. Update and Upgrade System Packages (Must-Do)
 
 Keeping your system packages up to date is crucial for security and stability.
@@ -448,7 +450,7 @@ By following these steps, you will significantly improve the security and stabil
 
 If you see any mistake or any better approach, feel free to share them in the comment.
 
-For those interested in automating this setup process, please refer to the [Linux Server Setup Script](Linux-server-setup-script.md).
+### For those interested in automating this setup process, please refer to the [Linux Server Setup Script](Linux-server-setup-script.md).
 
 ## Regards
 [SR Tamim](https://sr-tamim.vercel.app)
