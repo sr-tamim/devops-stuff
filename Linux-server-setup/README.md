@@ -1,4 +1,5 @@
-![linux-server](https://gist.github.com/user-attachments/assets/5bf6a8f0-dab4-41d8-8030-9de9f6e3eb7a)
+![linux-server](https://github.com/user-attachments/assets/6e89ec54-052b-404a-827c-908640d9dd13)
+
 
 # Initial Linux Server Setup Guide
 
