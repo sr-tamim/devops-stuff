@@ -27,12 +27,7 @@ sudo dnf update -y
 
 - `sudo dnf update -y`: Updates all the installed packages to their latest versions. The `-y` flag automatically confirms the update.
 
-### Arch Linux based systems
-```sh
-sudo pacman -Syu
-```
 
-- `sudo pacman -Syu`: Updates the package lists and upgrades all the installed packages to their latest versions.
 
 ## 2. Create a New User and Grant Sudo Privileges (Must-Do)
 
@@ -59,15 +54,7 @@ sudo usermod -aG wheel newuser
 - `sudo usermod -aG wheel newuser`: Adds the new user to the `wheel` group, granting them administrative privileges.
 
 
-### Arch Linux based systems
-```sh
-# Replace 'newuser' with your desired username
-sudo useradd -m -G wheel newuser
-sudo passwd newuser
-```
 
-- `sudo useradd -m -G wheel newuser`: Creates a new user with the username `newuser` and adds them to the `wheel` group.
-- `sudo passwd newuser`: Sets a password for the new user.
 
 ## 3. Disable Root User Login via SSH (Recommended)
 
@@ -91,7 +78,7 @@ Restart the SSH service:
 
 ```sh
 sudo systemctl restart ssh  # Debian/Ubuntu
-sudo systemctl restart sshd # RHEL/CentOS/Fedora or Arch Linux
+sudo systemctl restart sshd # RHEL/CentOS/Fedora
 ```
 
 - `sudo systemctl restart ssh`: Restarts the SSH service to apply the changes.
@@ -140,7 +127,7 @@ Save the file (`Ctrl + S`) and exit (`Ctrl + X`). Then, reload the SSH service:
 
 ```sh
 sudo systemctl restart ssh  # Debian/Ubuntu
-sudo systemctl restart sshd # RHEL/CentOS/Fedora or Arch Linux
+sudo systemctl restart sshd # RHEL/CentOS/Fedora
 ```
 
 - `sudo systemctl restart ssh`: Restarts the SSH service to apply the changes.
@@ -175,7 +162,7 @@ sudo ufw enable
 
 - `sudo ufw enable`: Enables the UFW firewall.
 
-### RHEL/CentOS/Fedora and Arch Linux based systems
+### RHEL/CentOS/Fedora based systems
 
 Install and configure `firewalld` as UFW is not typically used on these distributions.
 
@@ -183,11 +170,9 @@ Install `firewalld`:
 
 ```sh
 sudo dnf install firewalld -y  # RHEL/CentOS/Fedora
-sudo pacman -S firewalld       # Arch Linux
 ```
 
 - `sudo dnf install firewalld -y`: Installs the `firewalld` package on RHEL/CentOS/Fedora.
-- `sudo pacman -S firewalld`: Installs the `firewalld` package on Arch Linux.
 
 Start and enable `firewalld`:
 
@@ -265,27 +250,7 @@ sudo systemctl restart fail2ban
 
 - `sudo systemctl restart fail2ban`: Restarts the Fail2Ban service to apply the changes.
 
-### Arch Linux based systems
 
-We may use `sshguard` instead of `fail2ban` on Arch Linux.
-
-Install `sshguard`:
-
-```sh
-sudo pacman -S sshguard
-```
-
-- `sudo pacman -S sshguard`: Installs the `sshguard` package.
-
-Enable and start the `sshguard` service:
-
-```sh
-sudo systemctl enable sshguard
-sudo systemctl start sshguard
-```
-
-- `sudo systemctl enable sshguard`: Enables the `sshguard` service to start at boot.
-- `sudo systemctl start sshguard`: Starts the `sshguard` service.
 
 
 ## 7. Enable Automatic Security Updates (Recommended)
@@ -328,8 +293,7 @@ sudo systemctl enable --now dnf-automatic.timer
 
 - `sudo systemctl enable --now dnf-automatic.timer`: Enables and starts the `dnf-automatic` service to run automatically.
 
-### Arch Linux based systems
-Automatic updates are not recommended on Arch Linux due to its rolling release nature. It's best to manually update the system regularly.
+
 
 ## 8. Configure Time Synchronization (Optional)
 
@@ -349,20 +313,7 @@ sudo systemctl start chrony     # Debian/Ubuntu and RHEL/CentOS/Fedora
 - `sudo systemctl enable chrony`: Enables the Chrony service to start at boot.
 - `sudo systemctl start chrony`: Starts the Chrony service.
 
-### Arch Linux based systems
-We can use `ntp` for time synchronization on Arch Linux.
 
-Install and enable `ntp`:
-
-```sh
-sudo pacman -S ntp
-sudo systemctl enable ntpd
-sudo systemctl start ntpd
-```
-
-- `sudo pacman -S ntp`: Installs the NTP package.
-- `sudo systemctl enable ntpd`: Enables the NTP service to start at boot.
-- `sudo systemctl start ntpd`: Starts the NTP service.
 
 ## 9. Secure Shared Memory (Optional)
 
@@ -374,7 +325,6 @@ Edit the `/etc/fstab` file:
 sudo nano /etc/fstab
 ```
 
-### Debian/Ubuntu and RHEL/CentOS/Fedora based systems
 Add the following line at the end of the file: 
 
 ```sh
@@ -382,15 +332,6 @@ tmpfs     /run/shm     tmpfs     defaults,noexec,nosuid     0     0
 ```
 
 - `tmpfs /run/shm tmpfs defaults,noexec,nosuid 0 0`: Mounts the shared memory with `noexec` and `nosuid` options to prevent execution of binaries and set-user-identifier bits.
-
-### Arch Linux based systems
-Add the following line at the end of the file:
-
-```sh
-tmpfs     /dev/shm     tmpfs     defaults,noexec,nosuid     0     0
-```
-
-- `tmpfs /dev/shm tmpfs defaults,noexec,nosuid 0 0`: Mounts the shared memory with `noexec` and `nosuid` options to prevent execution of binaries and set-user-identifier bits.
 
 ## 10. Install and Configure Logwatch for System Monitoring (Optional)
 
@@ -401,7 +342,6 @@ Install Logwatch:
 ```sh
 sudo apt install logwatch -y    # Debian/Ubuntu
 sudo dnf install logwatch -y    # RHEL/CentOS/Fedora
-sudo pacman -S logwatch         # Arch Linux
 ```
 
 - `sudo apt install logwatch -y`: Installs the Logwatch package.
@@ -439,7 +379,6 @@ Install and configure tools like `htop`, `netdata`, or `Prometheus` for monitori
 ```sh
 sudo apt install htop -y    # Debian/Ubuntu
 sudo dnf install htop -y    # RHEL/CentOS/Fedora
-sudo pacman -S htop         # Arch Linux
 ```
 
 - `sudo apt install htop -y`: Installs `htop`, an interactive process viewer.

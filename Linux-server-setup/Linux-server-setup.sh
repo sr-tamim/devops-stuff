@@ -6,6 +6,12 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Check if the system is Arch Linux and exit if it is
+if [ -f /etc/arch-release ] || grep -q 'Arch Linux' /etc/os-release 2>/dev/null; then
+    echo "This script does not support Arch Linux. Exiting."
+    exit 1
+fi
+
 # Function to prompt user for confirmation
 confirm() {
     read -r -p "$1 [y/N] " response
@@ -36,8 +42,6 @@ update_system() {
             sudo apt update && sudo apt upgrade -y
         elif [ -f /etc/redhat-release ]; then
             sudo dnf update -y
-        elif [ -f /etc/arch-release ]; then
-            sudo pacman -Syu
         fi
         clear_terminal
         echo "System packages have been updated and upgraded."
@@ -55,9 +59,6 @@ create_user() {
         elif [ -f /etc/redhat-release ]; then
             sudo adduser "$newuser"
             sudo usermod -aG wheel "$newuser"
-        elif [ -f /etc/arch-release ]; then
-            sudo useradd -m -G wheel "$newuser"
-            sudo passwd "$newuser"
         fi
         clear_terminal
         echo "New user $newuser has been created and added to the sudo group."
@@ -120,22 +121,16 @@ setup_firewall() {
             sudo systemctl enable firewalld
             sudo firewall-cmd --permanent --add-service=ssh
             sudo firewall-cmd --reload
-        elif [ -f /etc/arch-release ]; then
-            sudo pacman -S firewalld
-            sudo systemctl start firewalld
-            sudo systemctl enable firewalld
-            sudo firewall-cmd --permanent --add-service=ssh
-            sudo firewall-cmd --reload
         fi
         clear_terminal
         echo "Firewall has been set up."
     fi
 }
 
-# Function to setup Fail2Ban or sshguard
+# Function to setup Fail2Ban
 setup_fail2ban() {
-    if confirm "Do you want to setup Fail2Ban or sshguard?"; then
-        echo "Setting up Fail2Ban or sshguard... Please wait."
+    if confirm "Do you want to setup Fail2Ban?"; then
+        echo "Setting up Fail2Ban... Please wait."
         if [ -f /etc/debian_version ]; then
             sudo apt install fail2ban -y
             sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
@@ -146,13 +141,9 @@ setup_fail2ban() {
             sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
             sudo sed -i 's/^#enabled.*/enabled = true/' /etc/fail2ban/jail.local
             sudo systemctl restart fail2ban
-        elif [ -f /etc/arch-release ]; then
-            sudo pacman -S sshguard
-            sudo systemctl enable sshguard
-            sudo systemctl start sshguard
         fi
         clear_terminal
-        echo "Fail2Ban or sshguard has been set up."
+        echo "Fail2Ban has been set up."
     fi
 }
 
@@ -170,10 +161,6 @@ enable_auto_updates() {
             sudo systemctl enable --now dnf-automatic.timer
             clear_terminal
             echo "Automatic security updates have been enabled."
-        elif [ -f /etc/arch-release ]; then
-            clear_terminal
-            echo "Automatic updates are not recommended on Arch Linux due to its rolling release nature. It's best to manually update the system regularly using the following command:"
-            echo "sudo pacman -Syu"
         fi
     fi
 }
@@ -190,10 +177,6 @@ configure_time_sync() {
             sudo dnf install chrony -y
             sudo systemctl enable chrony
             sudo systemctl start chrony
-        elif [ -f /etc/arch-release ]; then
-            sudo pacman -S ntp
-            sudo systemctl enable ntpd
-            sudo systemctl start ntpd
         fi
         clear_terminal
         echo "Time synchronization has been configured."
@@ -206,8 +189,6 @@ secure_shared_memory() {
         echo "Securing shared memory... Please wait."
         if [ -f /etc/debian_version ] || [ -f /etc/redhat-release ]; then
             echo "tmpfs /run/shm tmpfs defaults,noexec,nosuid 0 0" | sudo tee -a /etc/fstab
-        elif [ -f /etc/arch-release ]; then
-            echo "tmpfs /dev/shm tmpfs defaults,noexec,nosuid 0 0" | sudo tee -a /etc/fstab
         fi
         clear_terminal
         echo "Shared memory has been secured."
@@ -222,8 +203,6 @@ setup_logwatch() {
             sudo apt install logwatch -y
         elif [ -f /etc/redhat-release ]; then
             sudo dnf install logwatch -y
-        elif [ -f /etc/arch-release ]; then
-            sudo pacman -S logwatch
         fi
         read -r -p "Enter the email address for Logwatch reports: " email
         sudo sed -i "s/^MailTo.*/MailTo = $email/" /usr/share/logwatch/default.conf/logwatch.conf
