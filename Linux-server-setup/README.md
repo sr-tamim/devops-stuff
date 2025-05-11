@@ -1,397 +1,60 @@
-![linux-server](https://github.com/user-attachments/assets/6e89ec54-052b-404a-827c-908640d9dd13)
+# Linux Server Setup Script
 
+This script automates the initial setup process for a new Linux server, focusing on basic security and maintenance tasks. It is designed to save time and ensure consistency when configuring multiple servers.
 
-# Initial Linux Server Setup Guide
+## Why Use This Script?
 
-This guide covers the initial setup process for a new Linux server, focusing on basic security and maintenance tasks.
+Manually setting up a Linux server can be time-consuming and prone to errors. This script automates the essential steps, ensuring that your server is configured securely and efficiently. It covers:
 
-#### For those interested in automating this setup process, please refer to the [Linux Server Setup Script](Linux-server-setup-script.md).
+1. Updating and upgrading system packages
+2. Creating a new user and granting sudo privileges
+3. Disabling root login via SSH
+4. Setting up SSH key authentication
+5. Further hardening SSH configuration
+6. Configuring a firewall
+7. Setting up Fail2Ban
+8. Securing network protocols
+9. Hardening kernel parameters
+10. Setting up intrusion detection with auditd
+11. Enforcing password policy with expiration controls
+12. Securing critical system files
+13. Enabling automatic security updates
+14. Configuring time synchronization
+15. Securing shared memory
+16. Installing and configuring Logwatch
 
-## 1. Update and Upgrade System Packages (Must-Do)
+## How to Use This Script
 
-Keeping your system packages up to date is crucial for security and stability.
+1. **Download the Script**: Save the `Linux-server-setup.sh` script to your local machine.
+    - [Download Linux-server-setup.sh](Linux-server-setup.sh)
 
+2. **Make the Script Executable**: Run the following command to make the script executable:
 
-### Debian/Ubuntu based systems
-```sh
-sudo apt update && sudo apt upgrade -y
-```
+    ```sh
+    chmod +x Linux-server-setup.sh
+    ```
 
-- `sudo apt update`: Updates the package lists for upgrades and new package installations.
-- `sudo apt upgrade -y`: Upgrades all the installed packages to their latest versions. The `-y` flag automatically confirms the upgrade.
+3. **Run the Script with Sudo Privileges**: Execute the script with sudo privileges to perform the setup tasks:
 
-### RHEL/CentOS/Fedora based systems
-```sh
-sudo dnf update -y
-```
+    ```sh
+    sudo ./Linux-server-setup.sh
+    ```
 
-- `sudo dnf update -y`: Updates all the installed packages to their latest versions. The `-y` flag automatically confirms the update.
+4. **Follow the Prompts**: The script will prompt you for confirmation before performing each task. Follow the prompts to complete the setup.
 
+## Key Security Features
 
+The script implements multiple layers of security through:
 
-## 2. Create a New User and Grant Sudo Privileges (Must-Do)
-
-It's a good practice to avoid using the root account for daily operations.
-
-### Debian/Ubuntu based systems
-```sh
-# Replace 'newuser' with your desired username
-sudo adduser newuser
-sudo usermod -aG sudo newuser
-```
-
-- `sudo adduser newuser`: Creates a new user with the username `newuser`.
-- `sudo usermod -aG sudo newuser`: Adds the new user to the `sudo` group, granting them administrative privileges.
-
-### RHEL/CentOS/Fedora based systems
-```sh
-# Replace 'newuser' with your desired username
-sudo adduser newuser
-sudo usermod -aG wheel newuser
-```
-
-- `sudo adduser newuser`: Creates a new user with the username `newuser`.
-- `sudo usermod -aG wheel newuser`: Adds the new user to the `wheel` group, granting them administrative privileges.
-
-
-
-
-## 3. Disable Root User Login via SSH (Recommended)
-
-Disabling root login over SSH adds an extra layer of security.
-
-Edit the SSH configuration file:
-
-```sh
-sudo nano /etc/ssh/sshd_config
-```
-
-Find and change the following line:
-
-```sh
-PermitRootLogin no
-```
-
-- `PermitRootLogin no`: Disables SSH login for the root user.
-
-Restart the SSH service:
-
-```sh
-sudo systemctl restart ssh  # Debian/Ubuntu
-sudo systemctl restart sshd # RHEL/CentOS/Fedora
-```
-
-- `sudo systemctl restart ssh`: Restarts the SSH service to apply the changes.
-
-## 4. Disable SSH Login with Password and Allow SSH with Authorized Key Only (Recommended)
-
-Using SSH key authentication is more secure than password-based authentication.
-
-Generate an SSH key pair on your local machine:
-
-```sh
-ssh-keygen -t rsa -b 4096
-```
-
-- `ssh-keygen -t rsa -b 4096`: Generates a new SSH key pair using the RSA algorithm with a 4096-bit key length.
-
-Copy the public key to the server:
-
-```sh
-ssh-copy-id newuser@your_server_ip
-```
-
-- `ssh-copy-id newuser@your_server_ip`: Copies your public key to the server's authorized keys file for the `newuser` account.
-
-Add some SSH configuration in a new .conf file:
-
-```sh
-# make sure that drop-in directory exists
-sudo mkdir -p /etc/ssh/sshd_config.d
-
-# create a new .conf file
-sudo nano /etc/ssh/sshd_config.d/ssh_key_auth.conf
-```
-
-Write the following configuration in the file:
-
-```sh
-PasswordAuthentication no
-PubkeyAuthentication yes
-```
-
-- `PasswordAuthentication no`: Disables password authentication for SSH.
-- `PubkeyAuthentication yes`: Enables public key authentication for SSH.
-
-Save the file (`Ctrl + S`) and exit (`Ctrl + X`). Then, reload the SSH service:
-
-```sh
-sudo systemctl restart ssh  # Debian/Ubuntu
-sudo systemctl restart sshd # RHEL/CentOS/Fedora
-```
-
-- `sudo systemctl restart ssh`: Restarts the SSH service to apply the changes.
-
-## 5. Setup UFW (Uncomplicated Firewall) (Must-Do)
-
-A firewall protects your server by controlling incoming and outgoing network traffic.
-
-### Debian/Ubuntu based systems
-
-Install UFW:
-
-```sh
-sudo apt install ufw -y
-```
-
-- `sudo apt install ufw -y`: Installs the UFW firewall package.
-
-Allow OpenSSH through the firewall:
-
-```sh
-sudo ufw allow OpenSSH
-```
-
-- `sudo ufw allow OpenSSH`: Allows SSH connections through the firewall.
-
-Enable the firewall:
-
-```sh
-sudo ufw enable
-```
-
-- `sudo ufw enable`: Enables the UFW firewall.
-
-### RHEL/CentOS/Fedora based systems
-
-Install and configure `firewalld` as UFW is not typically used on these distributions.
-
-Install `firewalld`:
-
-```sh
-sudo dnf install firewalld -y  # RHEL/CentOS/Fedora
-```
-
-- `sudo dnf install firewalld -y`: Installs the `firewalld` package on RHEL/CentOS/Fedora.
-
-Start and enable `firewalld`:
-
-```sh
-sudo systemctl start firewalld
-sudo systemctl enable firewalld
-```
-
-- `sudo systemctl start firewalld`: Starts the `firewalld` service.
-- `sudo systemctl enable firewalld`: Enables the `firewalld` service to start at boot.
-
-Allow OpenSSH through the firewall:
-
-```sh
-sudo firewall-cmd --permanent --add-service=ssh
-sudo firewall-cmd --reload
-```
-
-- `sudo firewall-cmd --permanent --add-service=ssh`: Allows SSH connections through the firewall.
-- `sudo firewall-cmd --reload`: Reloads the firewall rules to apply the changes.
-
-## 6. Setup Fail2Ban for SSH Jail (Recommended)
-
-Fail2Ban helps protect your server from brute-force attacks by banning IPs that show malicious signs.
-
-### Debian/Ubuntu and RHEL/CentOS/Fedora based systems
-Install Fail2Ban:
-
-```sh
-sudo apt install fail2ban -y    # Debian/Ubuntu
-sudo dnf install fail2ban -y    # RHEL/CentOS/Fedora
-```
-
-- `sudo apt install fail2ban -y`: Installs the Fail2Ban package.
-
-Create a local configuration file:
-
-```sh
-sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
-```
-
-- `sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local`: Copies the default configuration file to a local configuration file for customization.
-
-Edit the local configuration file:
-
-```sh
-sudo nano /etc/fail2ban/jail.local
-```
-
-Find and change the following lines:
-
-```sh
-[sshd]
-enabled = true
-port = ssh
-logpath = %(sshd_log)s
-bantime = 3600
-findtime = 600
-maxretry = 3
-```
-
-- `[sshd]`: Section for SSH settings.
-- `enabled = true`: Enables the SSH jail.
-- `port = ssh`: Specifies the port for SSH (default is 22).
-- `logpath = %(sshd_log)s`: Specifies the log file path for SSH logs.
-- `bantime = 3600`: Sets the ban time to 1 hour (3600 seconds).
-- `findtime = 600`: Sets the time window to 10 minutes (600 seconds) for considering failed attempts.
-- `maxretry = 3`: Sets the maximum number of failed attempts before banning.
-
-Restart Fail2Ban:
-
-```sh
-sudo systemctl restart fail2ban
-```
-
-- `sudo systemctl restart fail2ban`: Restarts the Fail2Ban service to apply the changes.
-
-
-
-
-## 7. Enable Automatic Security Updates (Recommended)
-
-Automatic updates help ensure your server stays secure with the latest security patches.
-
-### Debian/Ubuntu based systems
-Install the unattended-upgrades package:
-
-```sh
-sudo apt install unattended-upgrades -y
-```
-
-- `sudo apt install unattended-upgrades -y`: Installs the unattended-upgrades package.
-
-Enable automatic updates:
-
-```sh
-sudo dpkg-reconfigure --priority=low unattended-upgrades
-```
-
-- `sudo dpkg-reconfigure --priority=low unattended-upgrades`: Configures the package to enable automatic updates.
-
-### RHEL/CentOS/Fedora based systems
-Fedora and CentOS systems can use the `dnf-automatic` package for automatic updates.
-
-Install the `dnf-automatic` package:
-
-```sh
-sudo dnf install dnf-automatic -y
-```
-
-- `sudo dnf install dnf-automatic -y`: Installs the `dnf-automatic` package.
-
-Enable and start the `dnf-automatic` service:
-
-```sh
-sudo systemctl enable --now dnf-automatic.timer
-```
-
-- `sudo systemctl enable --now dnf-automatic.timer`: Enables and starts the `dnf-automatic` service to run automatically.
-
-
-
-## 8. Configure Time Synchronization (Optional)
-
-Ensuring your server's time is synchronized can prevent various issues.
-
-### Debian/Ubuntu and RHEL/CentOS/Fedora based systems
-Install and enable `chrony`:
-
-```sh
-sudo apt install chrony -y  # Debian/Ubuntu
-sudo dnf install chrony -y  # RHEL/CentOS/Fedora
-sudo systemctl enable chrony    # Debian/Ubuntu and RHEL/CentOS/Fedora
-sudo systemctl start chrony     # Debian/Ubuntu and RHEL/CentOS/Fedora
-```
-
-- `sudo apt install chrony -y`: Installs the Chrony package.
-- `sudo systemctl enable chrony`: Enables the Chrony service to start at boot.
-- `sudo systemctl start chrony`: Starts the Chrony service.
-
-
-
-## 9. Secure Shared Memory (Optional)
-
-Securing shared memory can help prevent certain types of attacks.
-
-Edit the `/etc/fstab` file:
-
-```sh
-sudo nano /etc/fstab
-```
-
-Add the following line at the end of the file: 
-
-```sh
-tmpfs     /run/shm     tmpfs     defaults,noexec,nosuid     0     0
-```
-
-- `tmpfs /run/shm tmpfs defaults,noexec,nosuid 0 0`: Mounts the shared memory with `noexec` and `nosuid` options to prevent execution of binaries and set-user-identifier bits.
-
-## 10. Install and Configure Logwatch for System Monitoring (Optional)
-
-Logwatch provides a daily summary of system logs.
-
-Install Logwatch:
-
-```sh
-sudo apt install logwatch -y    # Debian/Ubuntu
-sudo dnf install logwatch -y    # RHEL/CentOS/Fedora
-```
-
-- `sudo apt install logwatch -y`: Installs the Logwatch package.
-
-Edit the Logwatch configuration file:
-
-```sh
-sudo nano /usr/share/logwatch/default.conf/logwatch.conf
-```
-
-Find and change the following lines:
-
-```sh
-MailTo = your_email@example.com
-Range = yesterday
-Detail = Low
-```
-
-- `MailTo = your_email@example.com`: Sets the email address to send the log reports to.
-- `Range = yesterday`: Sets the report range to the previous day.
-- `Detail = Low`: Sets the detail level of the report to low.
-
-## 11. Regular Backups (Recommended)
-
-Regular backups are crucial for data recovery in case of failures.
-
-Set up regular backups using tools like `rsnapshot`, `rsync`, or a cloud-based backup service. Ensure you have a strategy for both local and offsite backups.
-
-## 12. Monitor System Performance (Optional)
-
-Monitoring tools help you keep an eye on your server's health and performance.
-
-Install and configure tools like `htop`, `netdata`, or `Prometheus` for monitoring your server's performance and health.
-
-```sh
-sudo apt install htop -y    # Debian/Ubuntu
-sudo dnf install htop -y    # RHEL/CentOS/Fedora
-```
-
-- `sudo apt install htop -y`: Installs `htop`, an interactive process viewer.
+1. **Access Control**: Creates non-root users, disables root SSH access, and enforces key-based authentication
+2. **Network Security**: Configures firewall rules, disables unnecessary protocols, and hardens the kernel against network attacks
+3. **Intrusion Prevention**: Sets up Fail2Ban to block malicious login attempts
+4. **System Monitoring**: Configures auditd for system auditing and Logwatch for log monitoring
+5. **Password Management**: Enforces strong password requirements and expiration policies
+6. **File System Security**: Applies appropriate permissions and optional immutable attributes to critical files
 
 ## Conclusion
 
-By following these steps, you will significantly improve the security and stability of your Linux server. Regular maintenance and monitoring are crucial to ensure your server remains secure and performs optimally.
+Using this script will help you quickly and securely set up your Linux server, implementing multiple layers of security hardening that follow industry best practices. All essential security and maintenance tasks are performed consistently across your servers, reducing the risk of configuration errors.
 
-If you see any mistake or any better approach, feel free to share them in the comment.
-
-### For those interested in automating this setup process, please refer to the [Linux Server Setup Script](Linux-server-setup-script.md).
-
-## Regards
-[SR Tamim](https://sr-tamim.vercel.app)
-
-[![sr-tamim's Profilator](https://profilator.deno.dev/sr-tamim?v=1.0.0.alpha.4)](https://github.com/sr-tamim)
+For more detailed information on each step, refer to the [Initial Linux Server Setup Guide](README.md).
