@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Docker Security Scanner
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/docker-security-scan.sh
+User=root
+
+[Install]
+WantedBy=multi-user.target

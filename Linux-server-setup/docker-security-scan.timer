@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Docker Security Scanner Timer
+After=docker.service
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target

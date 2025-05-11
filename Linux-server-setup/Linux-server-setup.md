@@ -611,9 +611,139 @@ sudo dnf install htop -y    # RHEL/CentOS/Fedora
 
 - `sudo apt install htop -y`: Installs `htop`, an interactive process viewer.
 
+## 19. Docker and Nginx Security (When Applicable)
+
+If your server will run Docker containers and use Nginx as a web server or reverse proxy, additional security measures should be implemented.
+
+### Securing Docker
+
+```sh
+# Create a more secure Docker daemon configuration
+sudo mkdir -p /etc/docker
+sudo nano /etc/docker/daemon.json
+```
+
+Add the following configuration:
+
+```json
+{
+  "live-restore": true,
+  "userland-proxy": false,
+  "no-new-privileges": true,
+  "userns-remap": "default",
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  },
+  "icc": false
+}
+```
+
+- `live-restore`: Keeps containers running during Docker daemon upgrades
+- `userland-proxy`: Disables the userland proxy for improved performance
+- `no-new-privileges`: Prevents container processes from gaining new privileges
+- `userns-remap`: Enables user namespace remapping for better isolation
+- `icc`: Disables inter-container communication by default for better isolation
+
+Create Docker group and add your user to it:
+
+```sh
+sudo groupadd docker
+sudo usermod -aG docker $USER
+```
+
+Add Docker content trust environment variable for signed images:
+
+```sh
+echo "export DOCKER_CONTENT_TRUST=1" >> ~/.bashrc
+```
+
+### Securing Nginx
+
+```sh
+# Install Nginx
+sudo apt install nginx -y    # Debian/Ubuntu
+sudo dnf install nginx -y    # RHEL/CentOS/Fedora
+
+# Generate strong Diffie-Hellman parameters
+sudo openssl dhparam -out /etc/nginx/dhparam.pem 2048
+
+# Edit Nginx configuration
+sudo nano /etc/nginx/nginx.conf
+```
+
+Add these security settings to your Nginx configuration:
+
+```nginx
+# Security headers
+add_header X-Content-Type-Options nosniff;
+add_header X-Frame-Options SAMEORIGIN;
+add_header X-XSS-Protection "1; mode=block";
+add_header Content-Security-Policy "default-src 'self'";
+add_header Referrer-Policy strict-origin-when-cross-origin;
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+# SSL settings
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers on;
+ssl_dhparam /etc/nginx/dhparam.pem;
+ssl_ciphers 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305';
+ssl_session_timeout 1d;
+ssl_session_cache shared:SSL:50m;
+ssl_session_tickets off;
+ssl_stapling on;
+ssl_stapling_verify on;
+```
+
+### Using Docker with Nginx
+
+When using Docker and Nginx together:
+
+1. Create a dedicated bridge network for your containers:
+```sh
+docker network create --driver bridge web-network
+```
+
+2. Use Docker volumes instead of bind mounts where possible:
+```sh
+docker volume create nginx-config
+docker volume create nginx-data
+```
+
+3. Run containers with least privilege:
+```sh
+docker run --name nginx -d \
+  --restart=unless-stopped \
+  --network web-network \
+  --read-only \
+  --cap-drop=ALL \
+  --cap-add=NET_BIND_SERVICE \
+  -p 80:80 -p 443:443 \
+  -v nginx-config:/etc/nginx \
+  -v nginx-data:/var/www/html \
+  nginx:alpine
+```
+
+4. Regularly scan your Docker images for vulnerabilities:
+```sh
+# Install Trivy vulnerability scanner
+sudo apt install trivy -y    # Debian/Ubuntu
+sudo dnf install trivy -y    # RHEL/CentOS/Fedora
+
+# Scan an image
+trivy image nginx:alpine
+```
+
+5. Implement Docker Content Trust for verified images:
+```sh
+export DOCKER_CONTENT_TRUST=1
+docker pull nginx:alpine
+```
+
 ## Conclusion
 
-By following these steps, you will significantly improve the security and stability of your Linux server. The advanced security measures including network hardening, kernel security, intrusion detection, and password policies add multiple layers of protection to your server infrastructure. Regular maintenance and monitoring are crucial to ensure your server remains secure and performs optimally.
+By following these steps, you will significantly improve the security and stability of your Linux server. The advanced security measures including network hardening, kernel security, intrusion detection, password policies, and specialized Docker/Nginx configurations add multiple layers of protection to your server infrastructure. Regular maintenance and monitoring are crucial to ensure your server remains secure and performs optimally.
 
 If you see any mistake or any better approach, feel free to share them in the comment.
 

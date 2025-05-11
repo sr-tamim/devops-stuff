@@ -22,6 +22,9 @@ Manually setting up a Linux server can be time-consuming and prone to errors. Th
 14. Configuring time synchronization
 15. Securing shared memory
 16. Installing and configuring Logwatch
+17. Installing and securing Docker
+18. Installing and securing Nginx
+19. Configuring Docker with Nginx as a secure reverse proxy
 
 ## How to Use This Script
 
@@ -49,6 +52,8 @@ The script implements multiple layers of security through:
 1. **Access Control**: Creates non-root users, disables root SSH access, and enforces key-based authentication
 2. **Network Security**: Configures firewall rules, disables unnecessary protocols, and hardens the kernel against network attacks
 3. **Intrusion Prevention**: Sets up Fail2Ban to block malicious login attempts
+4. **Container Security**: Implements Docker security best practices, including least privilege configurations and regular vulnerability scanning
+5. **Web Server Hardening**: Configures Nginx with secure headers, strong SSL/TLS settings, and restrictive permissions
 4. **System Monitoring**: Configures auditd for system auditing and Logwatch for log monitoring
 5. **Password Management**: Enforces strong password requirements and expiration policies
 6. **File System Security**: Applies appropriate permissions and optional immutable attributes to critical files
