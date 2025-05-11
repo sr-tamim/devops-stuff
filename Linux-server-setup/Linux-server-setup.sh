@@ -107,6 +107,64 @@ setup_ssh_key_auth() {
     fi
 }
 
+# Function to further harden SSH configuration
+harden_ssh() {
+    if confirm "Do you want to harden SSH configuration further?"; then
+        echo "Hardening SSH configuration... Please wait."
+        sudo mkdir -p /etc/ssh/sshd_config.d
+        
+        # Ask for allowed users
+        read -r -p "Enter space-separated usernames to allow SSH access (leave empty to allow all): " ssh_allowed_users
+        
+        # Ask for allowed groups
+        read -r -p "Enter space-separated groups to allow SSH access (leave empty to allow all): " ssh_allowed_groups
+        
+        # Create the SSH hardening configuration
+        {
+            echo "# SSH hardening configuration"
+            echo "Protocol 2"
+            echo "MaxAuthTries 3"
+            echo "MaxSessions 2"
+            echo "LoginGraceTime 30"
+            echo "ClientAliveInterval 300"
+            echo "ClientAliveCountMax 2"
+            echo "X11Forwarding no"
+            echo "AllowAgentForwarding no"
+            echo "AllowTcpForwarding no"
+            echo "PermitEmptyPasswords no"
+            
+            # Only add AllowUsers if specified
+            if [ -n "$ssh_allowed_users" ]; then
+                echo "AllowUsers $ssh_allowed_users"
+            fi
+            
+            # Only add AllowGroups if specified
+            if [ -n "$ssh_allowed_groups" ]; then
+                echo "AllowGroups $ssh_allowed_groups"
+            fi
+            
+            # Add strong ciphers, MACs and key exchange algorithms
+            echo "# Strong encryption algorithms"
+            echo "Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr"
+            echo "MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256"
+            echo "KexAlgorithms curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256"
+            
+            # Increase verbosity of logging
+            echo "LogLevel VERBOSE"
+            
+        } | sudo tee /etc/ssh/sshd_config.d/hardening.conf > /dev/null
+        
+        # Restart SSH service
+        if [ -f /etc/debian_version ]; then
+            sudo systemctl restart ssh
+        else
+            sudo systemctl restart sshd
+        fi
+        clear_terminal
+        echo "SSH configuration has been hardened."
+    fi
+}
+
 # Function to setup UFW or firewalld
 setup_firewall() {
     if confirm "Do you want to setup a firewall?"; then
@@ -144,6 +202,201 @@ setup_fail2ban() {
         fi
         clear_terminal
         echo "Fail2Ban has been set up."
+    fi
+}
+
+# Function to secure network protocols
+secure_network_protocols() {
+    if confirm "Do you want to disable potentially unnecessary network protocols?"; then
+        echo "Reviewing network protocols for disabling..."
+        
+        # Create a temporary file to build up our configuration
+        temp_file=$(mktemp)
+        echo "# Disable unused network protocols" > "$temp_file"
+        
+        # Ask about each protocol individually
+        if confirm "Disable DCCP (Datagram Congestion Control Protocol)? This is rarely used and can pose security risks."; then
+            echo "install dccp /bin/true" >> "$temp_file"
+            echo "DCCP protocol will be disabled."
+        fi
+        
+        if confirm "Disable SCTP (Stream Control Transmission Protocol)? Unless you use telecom applications, this can typically be disabled."; then
+            echo "install sctp /bin/true" >> "$temp_file"
+            echo "SCTP protocol will be disabled."
+        fi
+        
+        if confirm "Disable RDS (Reliable Datagram Sockets)? This is primarily used in high-performance computing and can be disabled on most servers."; then
+            echo "install rds /bin/true" >> "$temp_file"
+            echo "RDS protocol will be disabled."
+        fi
+        
+        if confirm "Disable TIPC (Transparent Inter-Process Communication)? This is a specialized protocol for cluster communication."; then
+            echo "install tipc /bin/true" >> "$temp_file"
+            echo "TIPC protocol will be disabled."
+        fi
+        
+        # Move temp file to actual location if any protocols were selected
+        if [ "$(wc -l < "$temp_file")" -gt 1 ]; then
+            sudo cp "$temp_file" /etc/modprobe.d/disable-protocols.conf
+            echo "Selected network protocols have been disabled."
+        else
+            echo "No network protocols were selected for disabling."
+        fi
+        
+        # Clean up temp file
+        rm "$temp_file"
+        clear_terminal
+        echo "Network protocol security configuration complete."
+    fi
+}
+
+# Function to harden kernel parameters
+harden_kernel_parameters() {
+    if confirm "Do you want to harden kernel parameters?"; then
+        echo "Configuring secure kernel parameters... Please wait."
+        {
+            echo "# IP Spoofing protection"
+            echo "net.ipv4.conf.all.rp_filter = 1"
+            echo "net.ipv4.conf.default.rp_filter = 1"
+            
+            echo "# Disable IP source routing"
+            echo "net.ipv4.conf.all.accept_source_route = 0"
+            echo "net.ipv4.conf.default.accept_source_route = 0"
+            
+            echo "# Ignore ICMP broadcast requests"
+            echo "net.ipv4.icmp_echo_ignore_broadcasts = 1"
+            
+            echo "# Disable IPv6 if not needed (ask user first)"
+            read -r -p "Do you want to disable IPv6? [y/N] " disable_ipv6
+            case "$disable_ipv6" in
+                [yY][eE][sS]|[yY]) 
+                    echo "net.ipv6.conf.all.disable_ipv6 = 1"
+                    echo "net.ipv6.conf.default.disable_ipv6 = 1"
+                    ;;
+            esac
+            
+            echo "# Additional kernel hardening"
+            echo "kernel.sysrq = 0"
+            echo "kernel.core_uses_pid = 1"
+            echo "kernel.dmesg_restrict = 1"
+            echo "kernel.yama.ptrace_scope = 1"
+            
+        } | sudo tee /etc/sysctl.d/99-security.conf > /dev/null
+        
+        # Apply sysctl settings
+        sudo sysctl -p /etc/sysctl.d/99-security.conf
+        clear_terminal
+        echo "Kernel parameters have been hardened."
+    fi
+}
+
+# Function to set up intrusion detection with auditd
+setup_auditd() {
+    if confirm "Do you want to set up auditd for system auditing?"; then
+        echo "Setting up auditd... Please wait."
+        if [ -f /etc/debian_version ]; then
+            sudo apt install auditd audispd-plugins -y
+        elif [ -f /etc/redhat-release ]; then
+            sudo dnf install audit audit-libs -y
+        fi
+        
+        # Configure basic audit rules
+        {
+            echo "# Monitor changes to authentication configuration"
+            echo "-w /etc/pam.d/ -p wa -k auth_changes"
+            echo "-w /etc/nsswitch.conf -p wa -k auth_changes"
+            echo "-w /etc/ssh/sshd_config -p wa -k auth_changes"
+            
+            echo "# Monitor privileged commands"
+            echo "-a always,exit -F path=/usr/bin/sudo -F perm=x -F auid>=1000 -F auid!=-1 -k privileged_actions"
+            
+            echo "# Monitor file system mounts"
+            echo "-a always,exit -F arch=b64 -S mount -F auid>=1000 -F auid!=-1 -k mount_operations"
+            echo "-a always,exit -F arch=b32 -S mount -F auid>=1000 -F auid!=-1 -k mount_operations"
+            
+            echo "# Monitor user/group modifications"
+            echo "-w /etc/group -p wa -k group_changes"
+            echo "-w /etc/passwd -p wa -k passwd_changes"
+            echo "-w /etc/shadow -p wa -k shadow_changes"
+            
+            echo "# Monitor network configurations"
+            echo "-w /etc/hosts -p wa -k network_changes"
+            echo "-w /etc/network/ -p wa -k network_changes"
+            
+            echo "# Monitor system startup scripts"
+            echo "-w /etc/init.d/ -p wa -k init_changes"
+            echo "-w /etc/systemd/ -p wa -k systemd_changes"
+            
+        } | sudo tee -a /etc/audit/rules.d/audit.rules > /dev/null
+        
+        # Enable and restart auditd
+        sudo systemctl enable auditd
+        sudo systemctl restart auditd
+        clear_terminal
+        echo "Auditd has been set up for system auditing."
+    fi
+}
+
+# Function to enforce password policy
+enforce_password_policy() {
+    if confirm "Do you want to enforce a strong password policy?"; then
+        echo "Setting up password policy... Please wait."
+        if [ -f /etc/debian_version ]; then
+            sudo apt install libpam-pwquality -y
+        elif [ -f /etc/redhat-release ]; then
+            sudo dnf install libpwquality -y
+        fi
+        
+        # Configure password quality
+        if [ -f /etc/pam.d/common-password ]; then
+            sudo sed -i 's/^password.*requisite.*pam_pwquality\.so.*/password    requisite     pam_pwquality.so retry=3 minlen=12 difok=3 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1 reject_username enforce_for_root/' /etc/pam.d/common-password 2>/dev/null || true
+        elif [ -f /etc/pam.d/system-auth ]; then
+            # For RHEL/CentOS systems
+            sudo sed -i 's/^password.*requisite.*pam_pwquality\.so.*/password    requisite     pam_pwquality.so retry=3 minlen=12 difok=3 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1 reject_username enforce_for_root/' /etc/pam.d/system-auth 2>/dev/null || true
+        fi
+        
+        # Ask for password expiration policy
+        if confirm "Do you want to configure password expiration policy?"; then
+            echo "Default values: Maximum age: 90 days, Minimum age: 1 day, Warning period: 7 days"
+            
+            read -r -p "Enter maximum password age in days (leave empty for default 90): " pass_max_days
+            read -r -p "Enter minimum password age in days (leave empty for default 1): " pass_min_days  
+            read -r -p "Enter password expiration warning period in days (leave empty for default 7): " pass_warn_age
+            
+            # Apply settings with defaults if not specified
+            [[ -n "$pass_max_days" ]] && sudo sed -i "s/^PASS_MAX_DAYS.*/PASS_MAX_DAYS   $pass_max_days/" /etc/login.defs || sudo sed -i 's/^PASS_MAX_DAYS.*/PASS_MAX_DAYS   90/' /etc/login.defs
+            [[ -n "$pass_min_days" ]] && sudo sed -i "s/^PASS_MIN_DAYS.*/PASS_MIN_DAYS   $pass_min_days/" /etc/login.defs || sudo sed -i 's/^PASS_MIN_DAYS.*/PASS_MIN_DAYS   1/' /etc/login.defs
+            [[ -n "$pass_warn_age" ]] && sudo sed -i "s/^PASS_WARN_AGE.*/PASS_WARN_AGE   $pass_warn_age/" /etc/login.defs || sudo sed -i 's/^PASS_WARN_AGE.*/PASS_WARN_AGE   7/' /etc/login.defs
+            
+            echo "Password expiration policy has been configured."
+        fi
+        
+        clear_terminal
+        echo "Password policy has been enforced."
+    fi
+}
+
+# Function to secure critical files
+secure_critical_files() {
+    if confirm "Do you want to secure critical system files?"; then
+        echo "Securing critical system files... Please wait."
+        
+        # Restrict access to critical files
+        sudo chmod 644 /etc/passwd
+        sudo chmod 644 /etc/group
+        sudo chmod 600 /etc/shadow
+        sudo chmod 600 /etc/gshadow
+        
+        # Ask about immutable flag (warning, can be problematic for system updates)
+        if command -v chattr &> /dev/null; then
+            if confirm "Do you want to set the immutable flag on critical files? (Warning: This may interfere with system updates)"; then
+                sudo chattr +i /etc/passwd /etc/shadow /etc/group /etc/gshadow 2>/dev/null || true
+                echo "Immutable flags have been set. Use 'sudo chattr -i <file>' to remove them when needed."
+            fi
+        fi
+        
+        clear_terminal
+        echo "Critical system files have been secured."
     fi
 }
 
@@ -218,8 +471,14 @@ update_system
 create_user
 disable_root_ssh
 setup_ssh_key_auth
+harden_ssh
 setup_firewall
 setup_fail2ban
+secure_network_protocols
+harden_kernel_parameters
+setup_auditd
+enforce_password_policy
+secure_critical_files
 enable_auto_updates
 configure_time_sync
 secure_shared_memory
